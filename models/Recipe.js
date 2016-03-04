@@ -3,8 +3,18 @@ var Schema = mongoose.Schema;
 var ObjectId = Schema.ObjectId;
 
 var recipeSchema = mongoose.Schema({
-    name: {type: String, required: true},
-    author: {type: ObjectId, ref: 'login'},
+    name: {type: String, required: true, unique: false},
+    author: {type: ObjectId, ref: 'login', required: true, unique: false},
+    likes: [{
+      type: ObjectId,
+      ref: 'login'
+    }],
+    comments: [{
+      comment: {type: String, required: true},
+      at: {type: Date, required: true},
+      by: {type: ObjectId, ref: 'login'}
+    }],
+    category: {type: ObjectId, ref: 'category', required: true},
     ingredients:[{
       adjective: {type: ObjectId, ref: 'adjective'},
       ingredient: {type: ObjectId, ref: 'ingredient'},
@@ -12,10 +22,15 @@ var recipeSchema = mongoose.Schema({
       unit: {type: ObjectId, ref: 'unit'}
     }],
     directions:[{
+      srno: {type: Number, required: true, unique: false},
       verb: {type: ObjectId, ref: 'verb'},
       utensil: {type: ObjectId, ref: 'utensil'},
       time: {type: Number, required: true}
-    }]
+    }],
+
+
+    createdAt: {type: Date, required: true, unique: false},
+    modifiedAt: {type: Date, required: true, unique: false}
 });
 
 

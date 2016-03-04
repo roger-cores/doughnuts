@@ -7,6 +7,8 @@ var bodyParser = require('body-parser');
 var passport = require('passport');
 var routes = require('./routes/index');
 var userRoute = require('./routes/users');
+var categoryRoute = require('./routes/category');
+var recipeRoute = require('./routes/recipe');
 var mongoose = require('mongoose');
 var session = require('express-session');
 var flash = require('connect-flash');
@@ -14,8 +16,10 @@ var models = require('./models');
 var dbaseConfig = require('./models/config.json');
 var connector = require('./models/connector');
 var seed = require('./seed');
+var utils = require('./utils');
 var app = express();
 
+var multiparty = require('multiparty');
 //set to qa server
 connector(mongoose, dbaseConfig.qa);
 require('./config/passport')(passport);
@@ -41,7 +45,9 @@ app.use(flash());
 
 
 app.use('/', routes);
-app.use('/api/user', userRoute.registerRoutes(passport));
+app.use('/api/user', userRoute.registerRoutes(models, passport, multiparty, utils));
+app.use('/api/category', categoryRoute.registerRoutes(models));
+app.use('/api/recipe', recipeRoute.registerRoutes(models, multiparty, utils));
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
@@ -56,6 +62,7 @@ app.use(function(req, res, next) {
 // will print stacktrace
 if (app.get('env') === 'development') {
   app.use(function(err, req, res, next) {
+    console.log(err);
     res.status(err.status || 500);
     res.render('error', {
       message: err.message,

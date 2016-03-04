@@ -1,8 +1,16 @@
 var mongoose = require('mongoose');
 var bcrypt   = require('bcrypt-nodejs');
 
+
+var Schema = mongoose.Schema;
+var ObjectId = Schema.ObjectId;
+
 // define the schema for our user model
 var userSchema = mongoose.Schema({
+
+    nickname: {type: String, unique: true, required: true},
+    //people who are following this user
+    followers: [{type: ObjectId, ref: 'login'}],
 
     local            : {
         email        : {type: String, unique: true, required: true},
