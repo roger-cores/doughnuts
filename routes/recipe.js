@@ -185,6 +185,8 @@ module.exports.registerRoutes = function(models, multiparty, utils){
 
 
   router.post('/', function(req, res, next){
+      models.Recipe.validateObject(req, models, next);
+  }, function(req, res, next){
 
       var date = Date.now();
       req.body.createdAt = date;
@@ -203,6 +205,8 @@ module.exports.registerRoutes = function(models, multiparty, utils){
   });
 
   router.put('/:id', function(req, res, next){
+      models.Recipe.validateObject(req, models, next);
+  },function(req, res, next){
 
 
       models.Recipe.findById(req.params.id, function(err, recipe){

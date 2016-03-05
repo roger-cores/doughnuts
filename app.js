@@ -9,6 +9,7 @@ var routes = require('./routes/index');
 var userRoute = require('./routes/users');
 var categoryRoute = require('./routes/category');
 var recipeRoute = require('./routes/recipe');
+var dataRoute = require('./routes/data')
 var mongoose = require('mongoose');
 var session = require('express-session');
 var flash = require('connect-flash');
@@ -48,6 +49,7 @@ app.use('/', routes);
 app.use('/api/user', userRoute.registerRoutes(models, passport, multiparty, utils));
 app.use('/api/category', categoryRoute.registerRoutes(models));
 app.use('/api/recipe', recipeRoute.registerRoutes(models, multiparty, utils));
+app.use('/api/data', dataRoute.registerRoutes(models));
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
@@ -80,6 +82,7 @@ app.use(function(err, req, res, next) {
     error: {}
   });
 });
+
 
 
 module.exports = app;

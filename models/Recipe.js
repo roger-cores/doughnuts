@@ -34,6 +34,21 @@ var recipeSchema = mongoose.Schema({
 });
 
 
+recipeSchema.methods.validateObject = function(req, models, next){
+    if(req.body && req.body.author){
+        models.ID.findById(req.body.author, function(err, user){
+            if(err){
+              next(err);
+            } else if(!user){
+              next({message: 'Invalid Document Reference'});
+            } else {
+              next();
+            }
+        });
+    }
+};
+
+
 var Recipe = mongoose.model('recipe', recipeSchema);
 
 module.exports = Recipe;
