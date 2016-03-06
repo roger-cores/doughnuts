@@ -2,11 +2,12 @@ var fs        = require("fs");
 var mongoose  = require('mongoose');
 var models    = this;
 var data      = require('./Data');
+var utils     = require('./../utils');
 
 var masterData = ["Adjective", "Ingredient", "Unit", "Utensil"];
 
 fs.readdirSync(__dirname + '/').forEach(function(file) {
-  if (file.match(/\.js$/) !== null && file != 'Data.js' && file != 'connector.js') {
+  if (file.match(/\.js$/) !== null && file != 'Data.js' && file != 'connector.js' && file != 'index.js' && !utils.contains(masterData, file)) {
     var name = file.replace('.js', '');
     exports[name] = require('./'+name);
   }

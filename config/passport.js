@@ -1,6 +1,10 @@
 var LocalStrategy   = require('passport-local').Strategy;
-
+var ClientPasswordStrategy = require('passport-oauth2-client-password').Strategy;
+var BearerStrategy = require('passport-http-bearer').Strategy;
+var BasicStrategy = require('passport-http').BasicStrategy;
+var crypto = require('crypto')
 var ID = require('./../models/ID');
+var models = require('./../models');
 
 module.exports = function(passport){
 	passport.serializeUser(function(user, done) {
@@ -17,7 +21,8 @@ module.exports = function(passport){
     passport.use('local-signup', new LocalStrategy({
     	usernameField: 'email',
     	passwordField: 'password',
-    	passReqToCallback: true
+    	passReqToCallback: true,
+			session: true
     },
     function(req, email, password, done){
     	process.nextTick(function() {
@@ -73,4 +78,65 @@ module.exports = function(passport){
         });
 
     }));
+
+
+		passport.use('clientBasic',new BasicStrategy(
+
+		    function (clientId, clientSecret, done) {
+					models.Client.findOne({clientId: clientId}, function(err, client){
+						if(err) {return done(err);}
+						if(!client) {return done(null, false);}
+						if (!client.trustedClient) return done(null, false);
+						if(client.clientSecret != clientSecret) {return done(null, false);}
+						return done(null, client);
+					});
+		    }
+		));
+
+		passport.use("clientPassword", new ClientPasswordStrategy(
+		  function(clientId, clientSecret, done) {
+				models.Client.findOne({clientId: clientId}, function(err, client){
+					if(err) {return done(err);}
+					if(!client) {return done(null, false);}
+					if (!client.trustedClient) return done(null, false);
+
+					if(client.clientSecret != clientSecret) {return done(null, false);}
+					return done(null, client);
+				});
+
+		  }
+		));
+
+
+		passport.use('accessToken', new BearerStrategy(function (accessToken, done) {
+
+
+
+		        var accessTokenHash = crypto.createHash('sha1').update(accessToken).digest('hex');
+
+
+						models.Token.findOne({name: accessTokenHash}, function(err, token){
+								if(err) return done(err);
+								if(!token) return done(null, false);
+								if(new Date() > token.expirationDate){
+									models.Token.remove({name: accessTokenHash}, function(err){done(err)});
+								} else {
+									models.ID.findOne({'local.email': token.userId}, function(err, user){
+										if(err) return done(err);
+										if(!user) return done(null, false);
+
+										var info = { scope: "*" }
+										done(null, user, info);
+									});
+								}
+						});
+
+
+		    }
+		));
+
+
+
+
+
 }
