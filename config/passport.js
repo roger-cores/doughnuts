@@ -19,14 +19,15 @@ module.exports = function(passport){
     });
 
     passport.use('local-signup', new LocalStrategy({
-    	usernameField: 'email',
+    	usernameField: 'username',
     	passwordField: 'password',
     	passReqToCallback: true,
 			session: true
     },
     function(req, email, password, done){
     	process.nextTick(function() {
-    		ID.findOne({'local.email': email}, function(err, user){
+    		ID.findOne({email: email}, function(err, user){
+					console.log(user);
     			if(err)
     				return done(err);
 
@@ -35,8 +36,8 @@ module.exports = function(passport){
 
     			} else {
     				var newId = new ID();
-    				newId.local.email = email;
-    				newId.local.password = newId.generateHash(password);
+    				newId.email = email;
+    				newId.password = newId.generateHash(password);
 						newId.nickname = req.body.nickname;
     				newId.save(function(err){
     					if(err)
@@ -52,7 +53,7 @@ module.exports = function(passport){
 
     passport.use('local-login', new LocalStrategy({
         // by default, local strategy uses username and password, we will override with email
-        usernameField : 'email',
+        usernameField : 'username',
         passwordField : 'password',
         passReqToCallback : true // allows us to pass back the entire request to the callback
     },
@@ -60,7 +61,7 @@ module.exports = function(passport){
 
         // find a user whose email is the same as the forms email
         // we are checking to see if the user trying to login already exists
-        ID.findOne({ 'local.email' :  email }, function(err, user) {
+        ID.findOne({ email :  email }, function(err, user) {
             // if there are any errors, return the error before anything else
             if (err)
                 return done(err);
@@ -121,7 +122,7 @@ module.exports = function(passport){
 								if(new Date() > token.expirationDate){
 									models.Token.remove({name: accessTokenHash}, function(err){done(err)});
 								} else {
-									models.ID.findOne({'local.email': token.userId}, function(err, user){
+									models.ID.findOne({email: token.userId}, function(err, user){
 										if(err) return done(err);
 										if(!user) return done(null, false);
 

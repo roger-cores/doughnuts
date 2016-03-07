@@ -1,7 +1,7 @@
 var express = require('express');
 var router = express.Router();
 
-module.exports.registerRoutes = function(models){
+module.exports.registerRoutes = function(models, codes){
 
   var pattern = /Adjective|Utensil|Unit|Ingredient|Verb/;
 
@@ -16,7 +16,7 @@ module.exports.registerRoutes = function(models){
           } else if(!data){
             next({message: 'saving ' + req.params.data + ' failed!'});
           } else {
-            res.status(201).send({_id: data._id, _v: data._v});
+            res.status(codes.CREATED).send({_id: data._id, _v: data._v});
           }
       });
   });
@@ -29,10 +29,10 @@ module.exports.registerRoutes = function(models){
       models[req.params.data].find({}, function(err, dataArray){
           if(err){
             next(err);
-          } else if(!dataArray){
-            next({message: 'loading documents failed'});
+          } else if(!dataArray || dataArray.length == 0){
+            res.status(codes.NOT_FOUND).send({message: 'loading documents failed'});
           } else {
-            res.status(200).send(dataArray);
+            res.status(codes.OK).send(dataArray);
           }
       });
   });
@@ -42,13 +42,13 @@ module.exports.registerRoutes = function(models){
       next({message: 'Wrong data selected'})
     } else next();
   }, function(req, res, next){
-    models[req.params.data].find({name: /req.params.searchquery/}, function(err, dataArray){
+    models[req.params.data].find({name: { "$regex": req.params.searchquery, "$options": "i" }}, function(err, dataArray){
         if(err){
           next(err);
-        } else if(!dataArray){
-          next({message: 'loading document failed'});
+        } else if(!dataArray || dataArray.length==0){
+          res.status(codes.NOT_FOUND).send({message: 'loading documents failed'});
         } else {
-          res.status(200).send(dataArray);
+          res.status(codes.OK).send(dataArray);
         }
     });
   });

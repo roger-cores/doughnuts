@@ -95,9 +95,9 @@ module.exports = function(models, ObjectId){
     new models.Utensil(utensil1).save(callback);
     new models.Utensil(utensil2).save(callback);
     var newId = new models.ID();
-    newId.local.email = "rogercores2@gmail.com";
+    newId.email = "rogercores2@gmail.com";
     newId.nickname = "rogercores"
-    newId.local.password = newId.generateHash("timex");
+    newId.password = newId.generateHash("timex");
 
     newId.save(callback);
     new models.Category(category1).save(callback);

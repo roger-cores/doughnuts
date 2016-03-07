@@ -8,29 +8,32 @@ var router = express.Router();
 var crypto = require('crypto');
 
 
-module.exports.registerRoutes = function(models, passport, multiparty, utils, oauth) {
+module.exports.registerRoutes = function(models, passport, multiparty, utils, oauth, codes) {
 
 		//change password DONE
 		//upload image DONE
 		//follow/unfollow DONE
 		//get count following/followers DONE
 
+    //search by nickname DONE
+    //search by email DONE
+
     var preAuthenticate = function(req, res, next){
       if(req.session.access_token)
-      var tokenHash = crypto.createHash('sha1').update(req.session.access_token).digest('hex');
-      else next({message: 'Unauthorized'});
+        var tokenHash = crypto.createHash('sha1').update(req.session.access_token).digest('hex');
+      else {res.status(codes.UNAUTHORIZED).send({message: 'Unauthorized'}); return;}
       models.Token.findOne({name: tokenHash}, function(err, token){
           if(err) next(err);
-          else if(!token){next({message: 'Unauthorized'})}
+          else if(!token){res.status(codes.UNAUTHORIZED).send({message: 'Unauthorized'})}
 
-          else if(token.expirationDate < Date.now()) next({message: 'Unauthorized'});
+          else if(token.expirationDate < Date.now()) res.status(codes.UNAUTHORIZED).send({message: 'Unauthorized'})
           else {
 
               req.body.access_token = req.session.access_token;
 
-              models.ID.findOne({'local.email': token.userId}, function(err, user){
+              models.ID.findOne({email: token.userId}, function(err, user){
                   if(err) next(err);
-                  else if(!user) next({message: 'Unauthorized'});
+                  else if(!user) res.status(codes.UNAUTHORIZED).send({message: 'Unauthorized'})
                   else {
                     req.body.user_id = user._id;
                     next();
@@ -46,12 +49,12 @@ module.exports.registerRoutes = function(models, passport, multiparty, utils, oa
 
         models.Token.findOne({name: tokenHash}, function(err, token){
             if(err) next(err);
-            else if(!token){next({message: 'Unauthorized'})}
+            else if(!token){res.status(codes.UNAUTHORIZED).send({message: 'Unauthorized'})}
 
-            else if(token.expirationDate < Date.now()) next({message: 'Unauthorized'});
+            else if(token.expirationDate < Date.now()) res.status(codes.UNAUTHORIZED).send({message: 'Unauthorized'});
             else {
               req.session.access_token = req.body.access_token;
-              res.status(200).send({code: 1})
+              res.status(codes.OK).send({code: 1})
 
             };
         });
@@ -63,93 +66,110 @@ module.exports.registerRoutes = function(models, passport, multiparty, utils, oa
     router.use('/recipe',
       preAuthenticate,
       passport.authenticate('accessToken', {session: false}),
-      recipeRoute.registerRoutes(models, multiparty, utils)
+      recipeRoute.registerRoutes(models, multiparty, utils, codes)
     );
 
     router.use('/data',
       preAuthenticate,
       passport.authenticate('accessToken', {session: false}),
-      dataRoute.registerRoutes(models)
+      dataRoute.registerRoutes(models, codes)
     );
 
     router.use('/category',
       preAuthenticate,
       passport.authenticate('accessToken', {session: false}),
-      categoryRoute.registerRoutes(models)
+      categoryRoute.registerRoutes(models, codes)
     );
 
     router.get('/logout', function(req, res) {
         req.logout();
-        res.redirect('/');
+        req.session.access_token = null;
+        res.status(codes.OK).send({code: 1});
     });
 
-    router.post('/signup', function(req, res, next){
+    router.post('/signup',
+     passport.authenticate('clientPassword', {session: false}),
+     function(req, res, next){
     	passport.authenticate('local-signup', function(err, user, info){
-    		if(err) {next(err); return;}
-    		if(!user){next({code: 0, message: 'signup failed'}); return;};
-
-    		req.logIn(user, function(err){
-    			if(err) {next(err); return;}
-    			res.json(user);
-    		});
-    	})(req, res, next);
-    });
-
-    router.post('/login', function(req, res, next){
-    	passport.authenticate('local-login', function(err, user, info){
-    		if(err) {next(err); return;}
-    		if(!user) {next({code: 0, message: 'authentication failed'}); return;};
-
-        req.logIn(user, function(err){
-    			if(err) {next(err); return;}
-    			res.json({code: 1, id: user._id});
-    		});
-
+    		if(err) {next(err);}
+    		else if(!user){next({code: 0, message: 'signup failed'});}
+        else {
+          res.status(codes.CREATED).send({_id: user._id, __v: user.__v})
+        }
 
     	})(req, res, next);
     });
 
-    router.get('/info',login.ensureLoggedIn(), function(req, res, next){
-        res.status(200).send({message: 'yo'});
-    });
+
+    router.get('/nickname/:nickname',
+      function(req, res, next){
+          models.ID.findOne({nickname: req.params.nickname}, function(err, user){
+            if(err) {next(err)}
+            else if(!user){res.status(codes.OK).send({code: 1});}
+            else res.status(codes.OK).send({code: 0});
+          });
+      }
+    );
+
+    router.get('/email/:email',
+      function(req, res, next){
+          models.ID.findOne({email: req.params.email}, function(err, user){
+            if(err) {next(err)}
+            else if(!user){res.status(codes.OK).send({code: 1});}
+            else res.status(codes.OK).send({code: 0});
+          });
+      }
+    );
 
 
-		router.put('/change-pass', function(req, res, next){
+
+		router.put('/change-pass',
+      passport.authenticate('clientPassword', {session: false}),
+      function(req, res, next){
 			passport.authenticate('local-login', function(err, user, info){
 				if(err) {next(err); return;}
-				if(!user) {next({code: 0, message: 'authentication failed'}); return;};
+				if(!user) {res.status(codes.UNAUTHORIZED).send({message: 'Unauthorized'}); return;};
 				if(req.body.newpassword)
-				user.local.password = user.generateHash(req.body.newpassword);
+				user.password = user.generateHash(req.body.newpassword);
 				user.save(function(err){
 					if(err) next(err);
-					else res.status(201).send({code: 1, id: user._id});
+					else res.status(codes.CREATED).send({code: 1, id: user._id});
 				});
 			})(req, res, next);
 		});
 
-		router.post('/img/:id', function(req, res, next){
+		router.post('/img',
+        preAuthenticate,
+        passport.authenticate('accessToken', {session: false}),
+
+        function(req, res, next){
 				var form = new multiparty.Form();
 
 				form.parse(req, function(err, fields, files){
 					if(err){
 						next(err);
 						return;
-					}
+					} else if(!files.avatar){
+            next({message: 'No file selected'});
+            return;
+          }
 
-					console.log(fields);
-					console.log(files);
-					mv(files.avatar[0].path,'./public/images/' + req.params.id, function(err){
+					mv(files.avatar[0].path,'./public/images/' + req.body.user_id, function(err){
 						if(err){
 							next(err);
 							return;
 						}
 
-						res.status(201).send({code: 1});
+						res.status(codes.CREATED).send({code: 1});
 					});
 				});
 		});
 
-		router.put('/:id/toggle-follow/:other_id', function(req, res, next){
+		router.put('/toggle-follow/:other_id',
+        preAuthenticate,
+        passport.authenticate('accessToken', {session: false}),
+
+        function(req, res, next){
 				var followers = false;
 				models.ID.findOne({_id: req.params.other_id}, function(err, user){
 					if(err){
@@ -158,15 +178,15 @@ module.exports.registerRoutes = function(models, passport, multiparty, utils, oa
 					}
 
 					if(!user){
-						next();
+						next(res.status(codes.NOT_FOUND).send({message: 'doesn\'t exist'}));
 						return;
 					}
-					console.log(utils.contains(user.followers, req.params.id));
-					if(utils.contains(user.followers, req.params.id)){
-						utils.remove(user.followers, req.params.id);
+					console.log(utils.contains(user.followers, req.body.user_id));
+					if(utils.contains(user.followers, req.body.user_id)){
+						utils.remove(user.followers, req.body.user_id);
 						followers = false;
 					} else {
-						user.followers.push(req.params.id);
+						user.followers.push(req.body.user_id);
 						followers = true;
 					}
 
@@ -178,30 +198,40 @@ module.exports.registerRoutes = function(models, passport, multiparty, utils, oa
 							return;
 						}
 
-						res.status(201).send({code: 1, followers: followers});
+						res.status(codes.CREATED).send({code: 1, followers: followers});
 					});
 				});
 		});
 
-		router.get('/:id/count-following', function(req, res, next){
+		router.get('/:id/count-following',
+        preAuthenticate,
+        passport.authenticate('accessToken', {session: false}),
+
+
+        function(req, res, next){
 				models.ID.count({followers: req.params.id}, function(err, count){
 						if(err) {
 							next(err);
 							return;
 						}
 
-						res.status(200).send({code: 1, following: count});
+						res.status(codes.OK).send({code: 1, following: count});
 				});
 		});
 
-		router.get('/:id/count-followers', function(req, res, next){
+		router.get('/:id/count-followers',
+      preAuthenticate,
+      passport.authenticate('accessToken', {session: false}),
+
+
+      function(req, res, next){
 			models.ID.findOne({_id: req.params.id}, function(err, user){
 				if(err){
 					next(err);
 					return;
 				}
 
-				res.status(200).send({code: 1, followers: user.followers.length})
+				res.status(codes.OK).send({code: 1, followers: user.followers.length})
 			});
 		});
 

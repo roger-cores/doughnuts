@@ -1,19 +1,17 @@
 var express = require('express');
 var router = express.Router();
 
-module.exports.registerRoutes = function(models){
+module.exports.registerRoutes = function(models, codes){
 
 
   router.get('/', function(req, res, next){
     models.Category.find({}).exec(function(err, categories){
       if(err) {
-        next();
+        next(err);
         return;
       }
-      res.status(200).send(categories);
+      res.status(codes.OK).send(categories);
     });
-  }, function(req, res, next){
-    res.status(500).send({errmsg: 'Internal Server Error'});
   });
 
   return router;

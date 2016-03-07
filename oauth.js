@@ -41,7 +41,7 @@ server.exchange(oauth2orize.exchange.password(function (client, username, passwo
     }
 
 
-    models.ID.findOne({'local.email': username}, function(err, user){
+    models.ID.findOne({email: username}, function(err, user){
       if(err) return done(err);
       if(!user) return done(null, false);
 

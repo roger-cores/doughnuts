@@ -3,7 +3,7 @@ var mv = require('mv');
 var router = express.Router();
 
 
-module.exports.registerRoutes = function(models, multiparty, utils) {
+module.exports.registerRoutes = function(models, multiparty, utils, codes) {
 
   //get list (under category with search) DONE
   //put like Recipe DONE
@@ -44,7 +44,7 @@ module.exports.registerRoutes = function(models, multiparty, utils) {
             return;
           }
 
-          res.status(200).send({code: 1});
+          res.status(codes.OK).send({code: 1});
         });
       });
   });
@@ -58,7 +58,7 @@ module.exports.registerRoutes = function(models, multiparty, utils) {
       }
 
       if(!recipe){
-        next({message: 'recipe doesnt exist'});
+        res.status(codes.NOT_FOUND).send({message: 'loading documents failed'});
         return;
       }
 
@@ -78,87 +78,94 @@ module.exports.registerRoutes = function(models, multiparty, utils) {
           return;
         }
 
-        res.status(201).send({code: 1, liked: liked});
+        res.status(codes.CREATED).send({code: 1, liked: liked});
       });
     });
 
   });
 
-
-  router.get('/:id/author/:author_id', function(req, res, next){
-    models.Recipe.find({_id: req.params.id, author: req.params.author_id}, function(err, recipes){
+  router.get('/author/:author_id', function(req, res, next){
+    models.Recipe.find({author: req.params.author_id}, function(err, recipes){
       if(err){
         next(err);
         return;
       }
 
       if(!recipes){
-        next({message: 'cant find documents'});
+        res.status(codes.NOT_FOUND).send({message: 'loading documents failed'});
         return;
       }
 
-      res.status(200).send(recipes);
+      res.status(codes.OK).send(recipes);
 
     });
 
   });
 
-  router.get('/:id/author/:author_id/count-likes', function(req, res, next){
-    models.Recipe.find({_id: req.params.id, author: req.params.author_id}, function(err, recipes){
+  router.get('/author/:author_id/count-likes', function(req, res, next){
+    models.Recipe.find({author: req.params.author_id}, function(err, recipes){
       if(err){
         next(err);
         return;
       }
 
-      if(!recipes){
-        next({message: 'cant find documents'});
+      if(!recipes || recipes.length == 0){
+        res.status(codes.OK).send({code: 1, count: 0});
         return;
       }
 
       var count = 0;
 
       for(var i in recipes){
-        count += recipe[i].likes.length;
+        count += recipes[i].likes.length;
       }
 
-      res.status(200).send({code: 1, count: count});
+      res.status(codes.OK).send({code: 1, count: count});
 
 
     });
 
   });
 
-
-  router.get('/:id/author/:author_id/count', function(req, res, next){
-    models.Recipe.count({_id: req.params.id, author: req.params.author_id}, function(err, recipes){
+  router.get('/author/:author_id/count', function(req, res, next){
+    models.Recipe.count({author: req.params.author_id}, function(err, count){
       if(err){
         next(err);
         return;
       }
 
-      if(!recipes){
-        next({message: 'cant find documents'});
+
+      if(!count){
+
+        res.status(codes.OK).send({code: 1, count: 0});
         return;
       }
 
-      res.status(200).send({code: 1, count: recipes.length});
+      res.status(codes.OK).send({code: 1, count: count});
 
     });
   });
 
   router.get('/:id', function(req, res, next){
-      models.Recipe.findById(req.params.id, function(err, recipe){
+      models.Recipe.findById(req.params.id)
+      .populate('ingredients.adjective')
+      .populate('ingredients.unit')
+      .populate('ingredients.ingredient')
+      .populate('author', 'nickname')
+      .populate('category')
+
+      .exec(function(err, recipe){
         if(err){
           next(err);
           return;
         }
 
         if(!recipe){
-          next({message: 'cant find document'});
+          res.status(codes.NOT_FOUND).send({message: 'loading documents failed'});
           return;
         }
 
-        res.status(200).send(recipe);
+        res.status(codes.OK).send(recipe);
 
       });
 
@@ -172,7 +179,7 @@ module.exports.registerRoutes = function(models, multiparty, utils) {
       }
 
       if(!recipe){
-        next({message: 'cant find document'});
+        res.status(codes.NOT_FOUND).send({message: 'loading documents failed'});
         return;
       }
 
@@ -182,7 +189,7 @@ module.exports.registerRoutes = function(models, multiparty, utils) {
           return;
         }
 
-        res.status(200).send({code: 1, message: 'removed'});
+        res.status(codes.OK).send({code: 1, message: 'removed'});
       });
 
     });
@@ -205,7 +212,7 @@ module.exports.registerRoutes = function(models, multiparty, utils) {
 
 
 
-        res.status(200).send({code: 1, id: recipe._id});
+        res.status(codes.OK).send({code: 1, id: recipe._id});
       });
   });
 
@@ -221,7 +228,7 @@ module.exports.registerRoutes = function(models, multiparty, utils) {
         }
 
         if(!recipe){
-          next({message: 'cant load document'});
+          res.status(codes.NOT_FOUND).send({message: 'loading documents failed'});
           return;
         }
 
@@ -237,25 +244,64 @@ module.exports.registerRoutes = function(models, multiparty, utils) {
             return;
           }
 
-          res.status(200).send(recipe);
+          models.Recipe.findById(recipe._id)
+          .populate('ingredients.adjective')
+          .populate('ingredients.unit')
+          .populate('ingredients.ingredient')
+          .populate('author', 'nickname')
+          .populate('category')
+          .exec(function(err, recipe){
+            if(err) next(err);
+            else if(!recipe) next({message: 'Error while creating Recipe'});
+            else res.status(codes.CREATED).send(recipe);
+          });
+
+          //res.status(codes.CREATED).send(recipe);
         });
       });
 
   });
 
-  router.get('/:category_id/searchquery/:searchquery', function(req, res, next){
-      models.Recipe.find({category: req.params.category_id, name: /req.params.searchquery/}, function(err, recipes){
+  router.get('/category/:category_id', function(req, res, next){
+      models.Recipe.find({category: req.params.category_id})
+      .populate('ingredients.adjective').populate('ingredients.unit')
+      .populate('ingredients.ingredient').populate('author', 'nickname')
+      .populate('category')
+      .exec(function(err, recipes){
         if(err){
           next(err);
           return;
         }
 
-        res.status(200).send(recipes);
+
+
+        res.status(codes.OK).send(recipes);
       });
   });
 
 
-  router.post('/img/:id', function(req, res, next){
+  router.get('/category/:category_id/searchquery/:searchquery', function(req, res, next){
+      models.Recipe.find({category: req.params.category_id, name: { "$regex": req.params.searchquery, "$options": "i" }})
+      .populate('ingredients.adjective')
+      .populate('ingredients.unit')
+      .populate('ingredients.ingredient')
+      .populate('author', 'nickname')
+      .populate('category').exec(function(err, recipes){
+        if(err){
+          next(err);
+          return;
+        }
+
+
+
+        res.status(codes.OK).send(recipes);
+      });
+  });
+
+
+  router.post('/:id/img/', function(req, res, next){
+
+
       var form = new multiparty.Form();
 
       form.parse(req, function(err, fields, files){
@@ -263,17 +309,17 @@ module.exports.registerRoutes = function(models, multiparty, utils) {
           next(err);
           return;
         }
+        else if(!files.avatar){next({message: 'Invalid Arguement'});}
+        else {
+          mv(files.avatar[0].path,'./public/images/' + req.params.id, function(err){
+            if(err){
+              next(err);
+              return;
+            }
 
-        console.log(fields);
-        console.log(files);
-        mv(files.avatar[0].path,'./public/images/' + req.params.id, function(err){
-          if(err){
-            next(err);
-            return;
-          }
-
-          res.status(201).send({code: 1});
-        });
+            res.status(codes.CREATED).send({code: 1});
+          });
+        }
       });
   });
 

@@ -19,6 +19,7 @@ var oauth2orize = require('oauth2orize');
 var nodeUtils = require('util');
 var oauth = require('./oauth');
 var app = express();
+var codes = require('./codes.json');
 
 var multiparty = require('multiparty');
 //set to qa server
@@ -48,7 +49,7 @@ require('./config/passport')(passport);
 
 
 app.use('/', routes);
-app.use('/api/user', userRoute.registerRoutes(models, passport, multiparty, utils, oauth));
+app.use('/api/user', userRoute.registerRoutes(models, passport, multiparty, utils, oauth, codes));
 
 
 

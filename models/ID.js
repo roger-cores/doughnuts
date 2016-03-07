@@ -12,10 +12,10 @@ var userSchema = mongoose.Schema({
     //people who are following this user
     followers: [{type: ObjectId, ref: 'login'}],
 
-    local            : {
-        email        : {type: String, unique: true, required: true},
-        password     : {type: String, unique: false, required: true},
-    },
+
+    email        : {type: String, unique: true, required: true},
+    password     : {type: String, unique: false, required: true},
+
     facebook         : {
         id           : String,
         token        : String,
@@ -41,7 +41,7 @@ userSchema.methods.generateHash = function(password) {
 
 // checking if password is valid
 userSchema.methods.validPassword = function(password) {
-    return bcrypt.compareSync(password, this.local.password);
+    return bcrypt.compareSync(password, this.password);
 };
 
 // create the model for users and expose it to our app
