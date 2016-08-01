@@ -45,6 +45,8 @@ module.exports.registerRoutes = function(models, passport, multiparty, utils, oa
 
     router.post('/validate-token', passport.authenticate('clientPassword', {failWithError: true}) , function(req, res, next){
 
+        console.log(req.body);
+
         var tokenHash = crypto.createHash('sha1').update(req.body.access_token).digest('hex');
 
         models.Token.findOne({name: tokenHash}, function(err, token){
@@ -62,8 +64,28 @@ module.exports.registerRoutes = function(models, passport, multiparty, utils, oa
       next({error: "" + err, code: -3});
     });
 
-    router.post('/oauth/token', oauth.token, function(err, req, res, next){
-      next({error: "" + err, code: 0});
+    router.post('/oauth/token', function(req, res, next){
+      console.log(req.body);
+      next();
+    }, oauth.token, function(err, req, res, next){
+
+      if(err.error){
+        if(err.error_description.equals("Invalid refresh token")){
+          err.code = -1;
+          res.status(codes.UNAUTHORIZED).send(err);
+        }
+        else if(err.error_description.equals("Unauthorized")){
+          err.code = -2;
+          res.status(codes.UNAUTHORIZED).send(err);
+        }
+        else if(err.error.equals("unsupported_grant_type")){
+          err.code = -3;
+          res.status(codes.BAD_REQUEST).send(err);
+        }
+      } else {
+        err.code = 0;
+        next(err);
+      }
     });
 
 
