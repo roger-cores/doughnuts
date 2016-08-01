@@ -43,24 +43,28 @@ module.exports.registerRoutes = function(models, passport, multiparty, utils, oa
       });
     }
 
-    router.post('/validate-token', function(req, res, next){
+    router.post('/validate-token', passport.authenticate('clientPassword', {failWithError: true}) , function(req, res, next){
 
         var tokenHash = crypto.createHash('sha1').update(req.body.access_token).digest('hex');
 
         models.Token.findOne({name: tokenHash}, function(err, token){
             if(err) next(err);
-            else if(!token){res.status(codes.UNAUTHORIZED).send({message: 'Unauthorized'})}
+            else if(!token){res.status(codes.UNAUTHORIZED).send({error: 'Invalid or Expired Token', code: -1})}
 
-            else if(token.expirationDate < Date.now()) res.status(codes.UNAUTHORIZED).send({message: 'Unauthorized'});
+            else if(token.expirationDate < Date.now()) res.status(codes.UNAUTHORIZED).send({error: 'Expired Token', code: -2});
             else {
               req.session.access_token = req.body.access_token;
               res.status(codes.OK).send({code: 1})
 
             };
         });
+    }, function(err, req, res, next){
+      next({error: "" + err, code: -3});
     });
 
-    router.post('/oauth/token', oauth.token);
+    router.post('/oauth/token', oauth.token, function(err, req, res, next){
+      next({error: "" + err, code: 0});
+    });
 
 
     router.use('/recipe',
