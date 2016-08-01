@@ -25,7 +25,7 @@ var multiparty = require('multiparty');
 //set to qa server
 connector(mongoose, dbaseConfig.qa);
 
-//seed(models, require('mongodb').ObjectID);
+seed(models, require('mongodb').ObjectID);
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
