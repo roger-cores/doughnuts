@@ -16,6 +16,8 @@ var userSchema = mongoose.Schema({
     email        : {type: String, unique: true, required: true},
     password     : {type: String, unique: false, required: true},
 
+    code     : {type: String, unique: true, required: false},
+
     facebook         : {
         id           : String,
         token        : String,
@@ -35,14 +37,20 @@ var userSchema = mongoose.Schema({
 
 // methods ======================
 // generating a hash
-userSchema.methods.generateHash = function(password) {
-    return bcrypt.hashSync(password, bcrypt.genSaltSync(8), null);
+userSchema.methods.generateHash = function(string) {
+    return bcrypt.hashSync(string, bcrypt.genSaltSync(8), null);
 };
 
 // checking if password is valid
 userSchema.methods.validPassword = function(password) {
     return bcrypt.compareSync(password, this.password);
 };
+
+//checking if code is valid
+userSchema.methods.validCode = function(code) {
+  return bcrypt.compareSync(code, this.code);
+}
+
 
 // create the model for users and expose it to our app
 var Login = mongoose.model('login', userSchema);

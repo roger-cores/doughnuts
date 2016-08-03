@@ -5,6 +5,7 @@ var BasicStrategy = require('passport-http').BasicStrategy;
 var crypto = require('crypto')
 var ID = require('./../models/ID');
 var models = require('./../models');
+var uuid = require('node-uuid');
 
 module.exports = function(passport){
 	passport.serializeUser(function(user, done) {
@@ -32,13 +33,16 @@ module.exports = function(passport){
     				return done(err);
 
     			if(user) {
-    				return done(null, false, req.flash('signupMessage', 'That email already exists'));
+    				return done("user exists");
 
     			} else {
+
+						var uuidx = uuid.v4();
     				var newId = new ID();
     				newId.email = email;
     				newId.password = newId.generateHash(password);
 						newId.nickname = req.body.nickname;
+						newId.code = newId.generateHash(uuidx);
     				newId.save(function(err){
     					if(err)
     						return done(err);

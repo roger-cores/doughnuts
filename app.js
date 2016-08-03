@@ -20,6 +20,25 @@ var nodeUtils = require('util');
 var oauth = require('./oauth');
 var app = express();
 var codes = require('./codes.json');
+var mailer = require('express-mailer');
+
+console.log(encodeURIComponent("mark/poweress.$$2a$08$HxCp3JBJ0dvNqKfNLcZvCea7llOQDItjK0uMJ9bNL.WP7VJmr2Zrm"));
+
+mailer.extend(app, {
+  from: 'noreply.doughnuts@gmail.com',
+  host: 'smtp.gmail.com', // hostname
+  secureConnection: true, // use SSL
+  port: 465, // port for secure SMTP
+  transportMethod: 'SMTP', // default is SMTP. Accepts anything that nodemailer accepts
+  auth: {
+    user: 'noreply.doughnuts@gmail.com',
+    pass: 'thedeccan'
+  }
+});
+
+
+
+
 
 var multiparty = require('multiparty');
 //set to qa server

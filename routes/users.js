@@ -6,6 +6,8 @@ var categoryRoute = require('./users/category');
 var login = require('connect-ensure-login');
 var router = express.Router();
 var crypto = require('crypto');
+mailer = require('express-mailer');
+var uuid = require('node-uuid');
 
 
 module.exports.registerRoutes = function(models, passport, multiparty, utils, oauth, codes) {
@@ -43,6 +45,44 @@ module.exports.registerRoutes = function(models, passport, multiparty, utils, oa
       });
     }
 
+    router.post('/forgot-pass/:email', function(req, res, next){
+      models.ID.findOne({email: req.params.email}, function(err, user){
+        if(err) next(err);
+        else if(!user) res.status(codes.NOT_FOUND).send({error: "This email doesn't exist!"});
+        else {
+
+          var uuidx = uuid.v4();
+          user.code = user.generateHash(uuidx);
+          console.log(user.code);
+          user.save(function(err, user){
+            if(err) next(err);
+            else if(!user){res.status(codes.SERVER_ERROR).send({error: "server error"})}
+            else {
+              res.mailer.send('email', {
+                to: user.email, // REQUIRED. This can be a comma delimited string just like a normal email to field.
+                subject: 'Account Recovery', // REQUIRED.
+                email: user.email,
+                code: user.code,
+                changePassLink: "http://192.168.0.106:3000/change-pass/" + encodeURIComponent(user.email) + "/" + encodeURIComponent(user.code),
+                didntRequestLink: "http://192.168.0.106:3000/security"
+                //otherProperty: 'Other Property' // All additional properties are also passed to the template as local variables.
+              }, function (err) {
+                if (err) {
+                  // handle error
+                  console.log(err);
+                  res.send({error: 'error sending email'});
+                  return;
+                }
+                res.send('Email Sent');
+              });
+            }
+          });
+
+
+        }
+      });
+    });
+
     router.post('/validate-token', passport.authenticate('clientPassword', {failWithError: true}) , function(req, res, next){
 
         console.log(req.body);
@@ -68,7 +108,7 @@ module.exports.registerRoutes = function(models, passport, multiparty, utils, oa
       console.log(req.body);
       next();
     }, oauth.token, function(err, req, res, next){
-
+      console.log(err);
       if(err.error){
         if(err.error_description.equals("Invalid refresh token")){
           err.code = -1;
@@ -114,16 +154,25 @@ module.exports.registerRoutes = function(models, passport, multiparty, utils, oa
     });
 
     router.post('/signup',
-     passport.authenticate('clientPassword', {session: false}),
+     passport.authenticate('clientPassword', {failWithError: true}),
      function(req, res, next){
     	passport.authenticate('local-signup', function(err, user, info){
-    		if(err) {next(err);}
-    		else if(!user){next({code: 0, message: 'signup failed'});}
+
+
+    		if(err) {
+          if(err.code === 11000) {
+            next('nickname exists');
+          } else next(err);
+        }
+    		else if(!user){next({code: 0, error: 'signup failed'});}
         else {
           res.status(codes.CREATED).send({_id: user._id, __v: user.__v})
         }
 
     	})(req, res, next);
+    }, function(err, req, res, next){
+      console.log(err);
+      next(err);
     });
 
 
