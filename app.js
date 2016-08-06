@@ -22,7 +22,6 @@ var app = express();
 var codes = require('./codes.json');
 var mailer = require('express-mailer');
 
-console.log(encodeURIComponent("mark/poweress.$$2a$08$HxCp3JBJ0dvNqKfNLcZvCea7llOQDItjK0uMJ9bNL.WP7VJmr2Zrm"));
 
 mailer.extend(app, {
   from: 'noreply.doughnuts@gmail.com',
@@ -57,6 +56,7 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'node_modules')));
 
 app.use(session({ secret: 'iyamnotsouthhero'}));
 app.use(passport.initialize());

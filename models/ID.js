@@ -48,7 +48,9 @@ userSchema.methods.validPassword = function(password) {
 
 //checking if code is valid
 userSchema.methods.validCode = function(code) {
-  return bcrypt.compareSync(code, this.code);
+  if(this.code)
+    return bcrypt.compareSync(code, this.code);
+  else return false;
 }
 
 

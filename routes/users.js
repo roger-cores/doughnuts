@@ -196,7 +196,33 @@ module.exports.registerRoutes = function(models, passport, multiparty, utils, oa
       }
     );
 
+    router.put('/changepass/:email/:code', function(req, res, next){
+      models.ID.findOne({email: req.params.email}, function(err, user){
+        if(err) next(err);
+        else if(!user) {res.status(codes.NOT_FOUND).send({message: 'User Doesn\'t Exist'})}
+        else {
+          if(!user.validCode("asdf")) {
+            console.log(req.body);
+            user.password = user.generateHash(req.body.user.newpassword);
+            user.save(function(err, user){
+    					if(err) next(err);
+    					else {
+                user.code = null;
+                user.save(function(err, user){
+                  if(err) next(err);
+                  if(!user) {res.status(codes.SERVER_ERROR).send({message: 'server error'})}
+                  res.status(codes.CREATED).send({code: 1, id: user._id});
+                });
 
+              }
+    				});
+          }
+          else {
+            res.status(codes.SERVER_ERROR).send({message: 'Code is invalid'});
+          }
+        }
+      });
+    });
 
 		router.put('/change-pass',
       passport.authenticate('clientPassword', {session: false}),
